@@ -1,0 +1,23 @@
+before_script:
+  - mkdir -p ~/.ssh
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/gitlabci_id_rsa
+  - chmod 600 ~/.ssh/gitlabci_id_rsa
+  - echo -e "host $DOKKU_HOST\n\tForwardAgent yes\n\tIdentityFile ~/.ssh/gitlabci_id_rsa\n\tRequestTTY yes\n" > ~/.ssh/config
+  - ssh-keyscan -p $DOKKU_PORT $DOKKU_HOST >> ~/.ssh/known_hosts
+  - ssh-keyscan -p $DOKKU_PORT $DOKKU_IP >> ~/.ssh/known_hosts
+
+stages:
+  - deploy
+
+deploy_to_dokku:
+  stage: deploy
+  script:
+    - rm -rf .git
+    - git config --global user.email "$GITLAB_USER_EMAIL"
+    - git config --global user.name "$GITLAB_USER_EMAIL"
+    - git clone ssh://dokku@$DOKKU_IP:$DOKKU_PORT/$DOKKU_APP_NAME --bare .git
+    - git init
+    - git remote add dokku ssh://dokku@$DOKKU_IP:$DOKKU_PORT/$DOKKU_APP_NAME
+    - git add -A
+    - git commit -m"deploy update"
+    - git push dokku master
